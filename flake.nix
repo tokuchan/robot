@@ -19,6 +19,7 @@
             cmake
             catch2
             boost
+            ccache
           ];
         };
       }
