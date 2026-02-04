@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find required packages
 find_package(Boost REQUIRED)
-find_package(Catch2 REQUIRED)
+find_package(Catch2 3 REQUIRED)
 
 # Main library or executable
 add_library(robot_lib src/robot.cpp)
@@ -18,6 +18,5 @@ enable_testing()
 
 # Unit tests with Catch2
 add_executable(robot_tests tests/catch_tests.cpp)
-target_link_libraries(robot_tests PRIVATE robot_lib Catch2::Catch2)
-target_compile_definitions(robot_tests PRIVATE CATCH_CONFIG_MAIN)
+target_link_libraries(robot_tests PRIVATE robot_lib Catch2::Catch2WithMain)
 add_test(NAME Catch2Tests COMMAND robot_tests)

@@ -17,7 +17,7 @@
             gcc
             gnumake
             cmake
-            catch2
+            catch2_3
             boost
             ccache
           ];
