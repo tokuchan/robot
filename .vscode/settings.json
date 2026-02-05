@@ -1,0 +1,34 @@
+{
+  "[cpp]": {
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "editor.formatOnSave": true
+  },
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "cmake.sourceDirectory": "${workspaceFolder}",
+  "cmake.buildDirectory": "${workspaceFolder}/build",
+  "files.exclude": {
+    "build/": false
+  },
+  "testMate.cpp.test.executables": "${workspaceFolder}/build/robot_tests",
+  "testMate.cpp.test.advancedExecutables": [
+    {
+      "pattern": "${workspaceFolder}/build/robot_tests",
+      "cwd": "${workspaceFolder}",
+      "env": {},
+      "runTask": {
+        "before": ["Build Project"]
+      },
+      "prependTestRunningArgs": ["podman", "run", "--rm", "-v", "${workspaceFolder}:/workspace", "-w", "/workspace", "robot-build", "nix", "develop", "--command"]
+    }
+  ],
+  "testMate.cpp.log.logpanel": true,
+  "testMate.cpp.debug.configTemplate": {
+    "type": "cppdbg",
+    "MIMode": "gdb",
+    "program": "${exec}",
+    "args": "${argsArray}",
+    "cwd": "${cwd}",
+    "env": "${envObj}",
+    "externalConsole": false
+  }
+}
