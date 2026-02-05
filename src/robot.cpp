@@ -1,14 +1,27 @@
-#include <boost/algorithm/string.hpp>
-#include <string>
+#include <iostream>
+#include <csignal>
+#include "mainloop.hpp"
 
-std::string to_upper_string(const std::string& text) {
-    std::string result = text;
-    boost::to_upper(result);
-    return result;
+// Global stop token
+std::stop_source stop_source;
+
+void signal_handler(int signal)
+{
+    if (signal == SIGINT)
+    {
+        stop_source.request_stop();
+    }
 }
 
-std::string to_lower_string(const std::string& text) {
-    std::string result = text;
-    boost::to_lower(result);
-    return result;
+int main(int argc, char *argv[])
+{
+    std::cout << "Robot application started." << std::endl;
+
+    // Then replace the placeholder with:
+    std::signal(SIGINT, signal_handler);
+    mainloop(stop_source);
+
+    std::cout << "Robot application exiting." << std::endl;
+
+    return 0;
 }

@@ -9,14 +9,16 @@ find_package(Boost REQUIRED)
 find_package(Catch2 3 REQUIRED)
 
 # Main library or executable
-add_library(robot_lib src/robot.cpp)
-target_link_libraries(robot_lib PUBLIC Boost::boost)
-target_include_directories(robot_lib PUBLIC include)
+add_executable(robot src/robot.cpp)
+target_link_libraries(robot PUBLIC Boost::boost)
+target_include_directories(robot PUBLIC include)
 
 # Enable testing
 enable_testing()
 
 # Unit tests with Catch2
 add_executable(robot_tests tests/catch_tests.cpp)
-target_link_libraries(robot_tests PRIVATE robot_lib Catch2::Catch2WithMain)
+target_link_libraries(robot_tests PRIVATE Catch2::Catch2WithMain)
+target_link_libraries(robot_tests PUBLIC Boost::boost)
+target_include_directories(robot_tests PUBLIC include)
 add_test(NAME Catch2Tests COMMAND robot_tests)
