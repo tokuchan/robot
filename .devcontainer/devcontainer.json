@@ -3,6 +3,10 @@
   "image": "mcr.microsoft.com/devcontainers/cpp:1-debian-12",
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "containerEnv": {
+    "CMAKE_CXX_STANDARD": "23",
+    "CXXFLAGS": "-std=c++23"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -12,7 +16,10 @@
       ],
       "settings": {
         "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "cmake.configureSettings": {
+          "CMAKE_CXX_STANDARD": "23"
+        }
       }
     }
   },

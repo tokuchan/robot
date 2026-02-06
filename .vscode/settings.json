@@ -19,10 +19,17 @@
       "env": {},
       "runTask": {
         "before": ["Build Project"]
-      },
-      "prependTestRunningArgs": ["podman", "run", "--rm", "-v", "${workspaceFolder}:/workspace", "-w", "/workspace", "robot-build", "nix", "develop", "--command"]
+      }
     }
   ],
+  "github.copilot.enable": {
+    "*": true,
+    "yaml": true,
+    "plaintext": true,
+    "markdown": true,
+    "cpp": true
+  },
+  "inlineChat.mode": "live",
   "testMate.cpp.log.logpanel": true,
   "testMate.cpp.debug.configTemplate": {
     "type": "cppdbg",
