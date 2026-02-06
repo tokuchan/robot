@@ -291,6 +291,33 @@ namespace robot::src::detail::sparse_set ::inline exports
             return data[index];
         }
 
+        /// @brief Returns a range view over all entity IDs in the sparse set.
+        ///
+        /// Provides a std::ranges-compatible view of the dense array for use with
+        /// range algorithms and range-based for loops with pipe operators.
+        ///
+        /// @return A range view over all active entity IDs.
+        ///
+        /// @note Time complexity: O(1)
+        ///
+        /// @see begin(), end() for iterator access
+        auto entities() noexcept
+        {
+            return data;
+        }
+
+        /// @brief Returns a const range view over all entity IDs in the sparse set.
+        ///
+        /// Provides a const std::ranges-compatible view of the dense array for use with
+        /// range algorithms when the sparse set should not be modified.
+        ///
+        /// @return A const range view over all active entity IDs.
+        ///
+        /// @note Time complexity: O(1)
+        auto entities() const noexcept
+        {
+            return data;
+        }
         /// @brief Returns an iterator to the beginning of the dense array.
         ///
         /// Allows range-based iteration over all active entities in the sparse set.

@@ -280,6 +280,26 @@ namespace robot::src::detail::component ::inline exports
             data.clear();
         }
 
+        /// @brief Returns a range of entity IDs in this component storage.
+        ///
+        /// Provides a std::ranges-compatible view over all entity IDs that have
+        /// this component. Useful for filtering, transforming, or composing with
+        /// other range algorithms.
+        ///
+        /// @return A range view of entity IDs.
+        /// @note Time complexity: O(1) (lazy evaluation)
+        /// @see begin() for iteration over (entity, data) pairs
+        ///
+        /// @par Example:
+        /// @code
+        /// auto active = positions.entities()
+        ///     | std::views::filter([](auto id) { return id > 100; });
+        /// @endcode
+        [[nodiscard]] auto entities() const
+        {
+            return entities.entities();
+        }
+
         /// @brief Returns an iterator to the beginning of (entity, data) pairs.
         ///
         /// Provides mutable iteration over all entity-component pairs stored in this component.
