@@ -1,0 +1,27 @@
+{
+  "name": "Robot C++ Development",
+  "image": "mcr.microsoft.com/devcontainers/cpp:1-debian-12",
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "twxs.cmake"
+      ],
+      "settings": {
+        "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "postCreateCommand": "bash -c 'apt-get update && apt-get install -y libboost-all-dev && cd /tmp && git clone --depth 1 --branch v3.10.0 https://github.com/catchorg/Catch2.git && cd Catch2 && cmake -B build -S . -DBUILD_TESTING=OFF && cmake --build build --target install'",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "configureZshAsDefaultShell": false
+    }
+  }
+}
