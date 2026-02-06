@@ -13,10 +13,11 @@ void mainloop(std::stop_source &stop_source)
 
             while (!stop_token.stop_requested())
             {
-                                     // Event loop body
-                                     // Process events here
-                                 }
+                // Event loop body
+                // Process events here
+            }
 
-                                 std::cout << "\rMain loop exiting..." << std::endl; },
+            std::cout << "\rMain loop exiting..." << std::endl;
+        },
         stop_source.get_token());
 }
