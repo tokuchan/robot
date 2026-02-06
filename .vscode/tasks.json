@@ -4,8 +4,7 @@
     {
       "label": "Build Project",
       "type": "shell",
-      "command": "make",
-      "args": ["build"],
+      "command": "cmake -B build -S . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -18,13 +17,14 @@
         "showReuseMessage": true,
         "clear": false
       },
-      "problemMatcher": []
+      "problemMatcher": [
+        "$gcc"
+      ]
     },
     {
       "label": "Run Tests",
       "type": "shell",
-      "command": "make",
-      "args": ["test"],
+      "command": "cmake -B build -S . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build && ./build/robot_tests",
       "group": {
         "kind": "test",
         "isDefault": true
@@ -37,13 +37,14 @@
         "showReuseMessage": true,
         "clear": false
       },
-      "problemMatcher": []
+      "problemMatcher": [
+        "$gcc"
+      ]
     },
     {
       "label": "Run Test Filter",
       "type": "shell",
-      "command": "make",
-      "args": ["test-filter", "FILTER=${input:testFilter}"],
+      "command": "cmake -B build -S . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build && ./build/robot_tests \"${input:testFilter}\"",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -52,13 +53,14 @@
         "showReuseMessage": true,
         "clear": false
       },
-      "problemMatcher": []
+      "problemMatcher": [
+        "$gcc"
+      ]
     },
     {
       "label": "Clean Build",
       "type": "shell",
-      "command": "make",
-      "args": ["clean"],
+      "command": "rm -rf build",
       "presentation": {
         "echo": true,
         "reveal": "always",
@@ -72,8 +74,7 @@
     {
       "label": "Build and Test",
       "type": "shell",
-      "command": "make",
-      "args": ["test"],
+      "command": "cmake -B build -S . -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build && ./build/robot_tests",
       "group": {
         "kind": "build"
       },
@@ -85,7 +86,29 @@
         "showReuseMessage": true,
         "clear": false
       },
-      "problemMatcher": []
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "type": "cppbuild",
+      "label": "C/C++: g++-12 build active file",
+      "command": "/usr/bin/g++-12",
+      "args": [
+        "-fdiagnostics-color=always",
+        "-g",
+        "${file}",
+        "-o",
+        "${fileDirname}/${fileBasenameNoExtension}"
+      ],
+      "options": {
+        "cwd": "${fileDirname}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build",
+      "detail": "compiler: /usr/bin/g++-12"
     }
   ],
   "inputs": [
