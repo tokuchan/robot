@@ -2,11 +2,13 @@
 #include <sparse_set.hpp>
 #include <algorithm>
 
+namespace ss = robot::src::exports::sparse_set;
+
 SCENARIO("SparseSet manages entity-component associations", "[sparse_set]")
 {
     GIVEN("an empty SparseSet")
     {
-        robot::SparseSet set;
+        ss::SparseSet<> set;
 
         WHEN("checking if it contains an entity")
         {
@@ -80,7 +82,7 @@ SCENARIO("SparseSet manages entity-component associations", "[sparse_set]")
 
     GIVEN("a SparseSet with several entities")
     {
-        robot::SparseSet set;
+        robot::src::SparseSet set;
         set.insert(7);
         set.insert(3);
         set.insert(15);
@@ -128,7 +130,7 @@ SCENARIO("SparseSet manages entity-component associations", "[sparse_set]")
 
     GIVEN("a SparseSet supporting iteration")
     {
-        robot::SparseSet set;
+        robot::src::SparseSet<> set;
         set.insert(2);
         set.insert(4);
         set.insert(6);
