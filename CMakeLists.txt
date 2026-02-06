@@ -18,7 +18,8 @@ target_include_directories(robot PUBLIC include)
 enable_testing()
 
 # Unit tests with Catch2
-add_executable(robot_tests tests/sparse_set_tests.cpp tests/component_tests.cpp)
+file(GLOB TEST_SOURCES "tests/*_tests.cpp")
+add_executable(robot_tests ${TEST_SOURCES})
 target_link_libraries(robot_tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(robot_tests PUBLIC Boost::boost)
 target_include_directories(robot_tests PUBLIC include src)
