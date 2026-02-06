@@ -295,7 +295,7 @@ namespace robot::src::detail::component ::inline exports
         /// auto active = positions.entities()
         ///     | std::views::filter([](auto id) { return id > 100; });
         /// @endcode
-        [[nodiscard]] auto entities() const
+        [[nodiscard]] auto entities_view() const
         {
             return entities.entities();
         }
