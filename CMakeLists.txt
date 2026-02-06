@@ -3,6 +3,7 @@ project(robot CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find required packages
 find_package(Boost REQUIRED)
@@ -17,8 +18,8 @@ target_include_directories(robot PUBLIC include)
 enable_testing()
 
 # Unit tests with Catch2
-add_executable(robot_tests tests/catch_tests.cpp)
+add_executable(robot_tests tests/sparse_set_tests.cpp)
 target_link_libraries(robot_tests PRIVATE Catch2::Catch2WithMain)
 target_link_libraries(robot_tests PUBLIC Boost::boost)
-target_include_directories(robot_tests PUBLIC include)
+target_include_directories(robot_tests PUBLIC include src)
 add_test(NAME Catch2Tests COMMAND robot_tests)
