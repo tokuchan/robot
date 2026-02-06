@@ -16,7 +16,7 @@
       }
     }
   },
-  "postCreateCommand": "bash -c 'apt-get update && apt-get install -y libboost-all-dev && cd /tmp && git clone --depth 1 --branch v3.10.0 https://github.com/catchorg/Catch2.git && cd Catch2 && cmake -B build -S . -DBUILD_TESTING=OFF && cmake --build build --target install && if [ -n \"$SSH_AUTH_SOCK\" ]; then mkdir -p ~/.ssh && ssh-add -L 2>/dev/null | head -1 > ~/.ssh/id_ed25519.pub && git config --global user.signingkey ~/.ssh/id_ed25519.pub; fi'",
+  "postCreateCommand": "bash -c 'sudo apt-get update && sudo apt-get install -y libboost-all-dev && cd /tmp && git clone --depth 1 --branch v3.4.0 https://github.com/catchorg/Catch2.git && cd Catch2 && cmake -B build -S . -DBUILD_TESTING=OFF && sudo cmake --build build --target install && if [ -n \"$SSH_AUTH_SOCK\" ]; then mkdir -p ~/.ssh && ssh-add -L 2>/dev/null | head -1 > ~/.ssh/id_ed25519.pub && git config --global user.signingkey ~/.ssh/id_ed25519.pub; fi'",
   "remoteUser": "vscode",
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
