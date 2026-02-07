@@ -1,4 +1,4 @@
-.PHONY: help build clean robot test test-filter
+.PHONY: help build clean robot test test-filter docs
 
 # Default target
 .DEFAULT_GOAL := help
@@ -19,6 +19,8 @@ build: ## Build the robot program using cmake in Nix dev environment
 clean: ## Remove build artifacts and temporary files
 	rm -rf build
 	rm -f robot
+	rm -rf docs
+	rm -f doxygen_sqlite3.db
 
 # Test target - runs the test suite
 test: build ## Run the test suite
@@ -31,3 +33,8 @@ test-filter: build ## Run tests matching a filter (make test-filter FILTER="patt
 # Robot target - runs the built robot program in Nix container
 robot: build ## Build and run the robot program
 	podman run --rm -v $(PWD):/workspace -w /workspace robot-build ./build/robot
+
+# Docs target - regenerates documentation
+docs: ## Regenerate Doxygen documentation
+	podman build --security-opt label=disable -t robot-build .
+	podman run --rm -v $(PWD):/workspace -w /workspace robot-build nix develop --command doxygen Doxyfile
