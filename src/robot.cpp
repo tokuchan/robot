@@ -17,7 +17,6 @@ int main(int argc, char *argv[])
 {
     std::cout << "Robot application started." << std::endl;
 
-    // Then replace the placeholder with:
     std::signal(SIGINT, signal_handler);
     mainloop(stop_source);
 
