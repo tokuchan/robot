@@ -2,15 +2,22 @@
   "configurations": [
     {
       "name": "Linux",
-      "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+      "compileCommands": "${workspaceFolder}/build/compile_commands_host.json",
       "includePath": [
-        "${workspaceFolder}/**",
-        "/usr/local/include",
-        "/usr/include"
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/src"
+      ],
+      "defines": [
+        "BOOST_CONTAINER_DYN_LINK",
+        "BOOST_CONTAINER_NO_LIB",
+        "BOOST_JSON_DYN_LINK",
+        "BOOST_JSON_NO_LIB"
       ],
       "cStandard": "c17",
       "cppStandard": "c++23",
-      "intelliSenseMode": "linux-gcc-x64"
+      "intelliSenseMode": "linux-gcc-x64",
+      "compilerPath": "/usr/bin/g++",
+      "configurationProvider": "ms-vscode.cmake-tools"
     }
   ],
   "version": 4

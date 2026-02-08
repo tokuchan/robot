@@ -41,6 +41,8 @@
     "externalConsole": false
   },
   "chat.tools.terminal.autoApprove": {
-    "dpkg": true
-  }
+    "dpkg": true,
+    "make": true
+  },
+  "editor.formatOnSave": true
 }
