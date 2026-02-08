@@ -39,5 +39,8 @@
     "cwd": "${cwd}",
     "env": "${envObj}",
     "externalConsole": false
+  },
+  "chat.tools.terminal.autoApprove": {
+    "dpkg": true
   }
 }
