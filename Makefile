@@ -15,6 +15,10 @@ build: ## Build the robot program using cmake in Nix dev environment
 	podman build --security-opt label=disable -t robot-build .
 	podman run --rm -v $(PWD):/workspace -w /workspace robot-build nix develop --command bash -c "rm -rf build && cmake -B build && cmake --build build"
 
+shell: ## Open a shell inside the build environment
+	podman build --security-opt label=disable -t robot-build .
+	podman run --rm -it -v $(PWD):/workspace -w /workspace robot-build nix develop --command bash
+
 # Clean target - removes build products
 clean: ## Remove build artifacts and temporary files
 	rm -rf build
