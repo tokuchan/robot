@@ -2,11 +2,11 @@ static_assert(__cplusplus > 2020'00);
 #pragma once
 
 #include <boost/iterator/zip_iterator.hpp>
-#include <boost/json.hpp>
 #include <limits>
 #include <tuple>
 #include <vector>
 #include "components.hpp"
+#include "math.hpp"
 
 /// @file component_types.hpp
 /// @brief Type definitions for commonly used components in the ECS.
@@ -15,77 +15,65 @@ static_assert(__cplusplus > 2020'00);
 /// holds relevant data for that aspect of an entity. These components can be
 /// stored in the component storage defined in component.hpp.
 
-namespace robot::src::detail::ecs::inline exports
+namespace robot::src::detail::component_types::inline exports
 {
-    /// @brief Position component representing 2D coordinates.
-    struct Position
-    {
-        float x, y; ///< Position of an entity in 2D space.
-
-        /// @brief Move the position by a given velocity and time delta.
-        /// @param velocity Velocity to apply to the position.
-        /// @param delta_time Time delta in seconds.
-        void move(const Velocity &velocity, float delta_time)
-        {
-            x += velocity.dx * delta_time;
-            y += velocity.dy * delta_time;
-        }
-
-        /// @brief Stream output operator that formats the position as JSON.
-        /// @param os Output stream to write to.
-        /// @param pos Position to format.
-        /// @return Reference to the output stream.
-        friend std::ostream &operator<<(std::ostream &os, const Position &pos)
-        {
-            os << "{\"x\": " << pos.x << ", \"y\": " << pos.y << "}";
-            return os;
-        }
-
-        /// @brief Stream input operator that parses a position from JSON format using boost::json.
-        /// @param is Input stream to read from.
-        /// @param pos Position to populate with parsed values.
-        /// @return Reference to the input stream.
-        friend std::istream &operator>>(std::istream &is, Position &pos)
-        {
-            boost::json::value json_value;
-            is >> json_value;
-            if (json_value.is_object())
-            {
-                auto const &obj = json_value.as_object();
-                pos.x = obj.at("x").as_double();
-                pos.y = obj.at("y").as_double();
-            }
-            else
-            {
-                is.setstate(std::ios::failbit);
-            }
-            return is;
-        }
-    };
-
     /// @brief Velocity component representing 2D motion.
-    struct Velocity
-    {
-        float dx, dy; ///< Velocity of an entity in 2D space.
-    };
+    using Velocity = Vec2;
+
+    /// @brief Position component representing 2D coordinates.
+    using Position = Vec2;
 
     /// @brief Counter component storing the number of hits taken.
     struct HitCounter
     {
-        std::uint32_t hits; ///< Number of hits an entity has taken.
-    };
-
-    /// @brief Simple 2D point type.
-    struct Point2D
-    {
-        float x, y; ///< 2D point coordinates.
+        std::uint32_t hits = 0; ///< Number of hits an entity has taken.
     };
 
     /// @brief Polygon represented by separate vectors of x and y vertex coordinates.
     struct Polygon
     {
-        std::vector<float> vertices_x; ///< X-coordinates of the polygon's vertices.
-        std::vector<float> vertices_y; ///< Y-coordinates of the polygon's vertices.
+        std::vector<Float> vertices_x; ///< X-coordinates of the polygon's vertices.
+        std::vector<Float> vertices_y; ///< Y-coordinates of the polygon's vertices.
+
+        /// @brief Construct a polygon from a list of vertices.
+        /// @param vertices List of (x, y) vertex coordinates.
+        Polygon(std::initializer_list<std::pair<Float, Float>> vertices)
+        {
+            for (const auto &[x, y] : vertices)
+            {
+                vertices_x.push_back(x);
+                vertices_y.push_back(y);
+            }
+        }
+
+        /// @brief Construct a polygon from a list of Vec2 vertices.
+        /// @param vertices List of Vec2 vertex coordinates.
+        Polygon(std::initializer_list<Vec2> vertices)
+        {
+            for (const auto &v : vertices)
+            {
+                vertices_x.push_back(v.x);
+                vertices_y.push_back(v.y);
+            }
+        }
+
+        /// @brief Default constructor for an empty polygon.
+        Polygon() = default;
+
+        /// @brief Return the number of vertices in the polygon.
+        /// @return The vertex count.
+        std::size_t size() const
+        {
+            assert(vertices_x.size() == vertices_y.size());
+            return vertices_x.size();
+        }
+
+        /// @brief Return true if this polygon has no vertices.
+        /// @return True if the polygon is empty; otherwise false.
+        bool empty() const
+        {
+            return vertices_x.empty() && vertices_y.empty();
+        }
 
         /// @brief Begin an iterator over the polygon's vertices.
         /// @return Iterator that yields tuples of (x, y) coordinates.
@@ -103,38 +91,54 @@ namespace robot::src::detail::ecs::inline exports
 
         /// @brief Compute the AABB (axis-aligned bounding box) of the polygon.
         /// @return Tuple containing (min_x, min_y, max_x, max_y).
-        std::tuple<float, float, float, float> get_aabb() const
+        AxisAlignedBoundingBox get_aabb() const
         {
-            float min_x = *std::min_element(vertices_x.begin(), vertices_x.end());
-            float max_x = *std::max_element(vertices_x.begin(), vertices_x.end());
-            float min_y = *std::min_element(vertices_y.begin(), vertices_y.end());
-            float max_y = *std::max_element(vertices_y.begin(), vertices_y.end());
-            return {min_x, min_y, max_x, max_y};
+            Float min_x = *std::min_element(vertices_x.begin(), vertices_x.end());
+            Float max_x = *std::max_element(vertices_x.begin(), vertices_x.end());
+            Float min_y = *std::min_element(vertices_y.begin(), vertices_y.end());
+            Float max_y = *std::max_element(vertices_y.begin(), vertices_y.end());
+            return {{min_x, min_y}, {max_x, max_y}};
+        }
+
+        /// @brief Test to see if this Polygon may intersect any other Polygons in a list using AABB checks.
+        /// @param others List of other Polygons to test against.
+        /// @return True if this Polygon's AABB overlaps with any other Polygon's AABB; otherwise false.
+        bool may_intersect(const std::vector<Polygon> &others) const
+        {
+            auto aabb = get_aabb();
+            for (const auto &other : others)
+            {
+                auto other_aabb = other.get_aabb();
+                if (aabb.intersects(other_aabb))
+                {
+                    return true; // AABBs overlap, so intersection is possible
+                }
+            }
+            return false; // No overlaps found
         }
 
         /// @brief Get the unnormalized normal vector of the edge at index i.
         /// @param i Edge index (uses i and (i + 1) % vertex_count).
         /// @return Pair containing the (x, y) components of the normal.
-        std::pair<float, float> get_edge_normal(std::size_t i) const
+        Vec2 get_edge_normal(std::size_t i) const
         {
-            std::size_t vertex_count = vertices_x.size();
-            float edge_x = vertices_x[(i + 1) % vertex_count] - vertices_x[i];
-            float edge_y = vertices_y[(i + 1) % vertex_count] - vertices_y[i];
+            std::size_t vertex_count = this->size();
+            Float edge_x = vertices_x[(i + 1) % vertex_count] - vertices_x[i];
+            Float edge_y = vertices_y[(i + 1) % vertex_count] - vertices_y[i];
             return {-edge_y, edge_x}; // Perpendicular to the edge
         }
 
         /// @brief Project a polygon onto the axis defined by (normal_x, normal_y).
         /// @param poly Polygon to project.
-        /// @param normal_x X component of the axis normal.
-        /// @param normal_y Y component of the axis normal.
+        /// @param normal Normal vector of the axis.
         /// @return Tuple containing the minimum and maximum projection values.
-        auto project_onto_axis(Polygon const &poly, float normal_x, float normal_y) const
+        auto project_onto_axis(Polygon const &poly, Vec2 normal) const
         {
-            float min_a = std::numeric_limits<float>::infinity();
-            float max_a = -std::numeric_limits<float>::infinity();
+            Float min_a = std::numeric_limits<Float>::infinity();
+            Float max_a = -std::numeric_limits<Float>::infinity();
             for (auto const &[vertex_x, vertex_y] : poly)
             {
-                float projection = normal_x * vertex_x + normal_y * vertex_y;
+                Float projection = normal.x * vertex_x + normal.y * vertex_y;
                 min_a = std::min(min_a, projection);
                 max_a = std::max(max_a, projection);
             }
@@ -149,11 +153,11 @@ namespace robot::src::detail::ecs::inline exports
             auto checkSeparationWith = [*this, &other](const Polygon &poly)
             {
                 // Check for separation on this polygon's edges
-                for (std::size_t i = 0; i < poly.vertices_x.size(); ++i)
+                for (std::size_t i = 0; i < poly.size(); ++i)
                 {
-                    auto [normal_x, normal_y] = get_edge_normal(i);
-                    auto [min_a, max_a] = project_onto_axis(*this, normal_x, normal_y);
-                    auto [min_b, max_b] = project_onto_axis(other, normal_x, normal_y);
+                    auto normal = get_edge_normal(i);
+                    auto [min_a, max_a] = project_onto_axis(*this, normal);
+                    auto [min_b, max_b] = project_onto_axis(other, normal);
 
                     if (max_a < min_b or max_b < min_a)
                     {
@@ -168,7 +172,7 @@ namespace robot::src::detail::ecs::inline exports
     };
 }
 
-namespace robot::src::inline exports::inline ecs
+namespace robot::src::inline exports::inline component_types
 {
-    using namespace detail::ecs::exports;
+    using namespace detail::component_types::exports;
 }
