@@ -11,14 +11,13 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
         CACHE STRING "Vcpkg toolchain file")
 endif()
 
-# Find required packages
-find_package(boost_json REQUIRED CONFIG)
-find_package(boost_system REQUIRED CONFIG)
+# Find required packages using standard find modules
+find_package(Boost REQUIRED COMPONENTS json)
 find_package(Catch2 3 REQUIRED)
 
 # Main library or executable
 add_executable(robot src/robot.cpp)
-target_link_libraries(robot PUBLIC Boost::json Boost::system)
+target_link_libraries(robot PUBLIC Boost::json)
 target_include_directories(robot PUBLIC include)
 
 # Enable testing
@@ -28,6 +27,6 @@ enable_testing()
 file(GLOB TEST_SOURCES "tests/*_tests.cpp")
 add_executable(robot_tests ${TEST_SOURCES})
 target_link_libraries(robot_tests PRIVATE Catch2::Catch2WithMain)
-target_link_libraries(robot_tests PUBLIC Boost::json Boost::system)
+target_link_libraries(robot_tests PUBLIC Boost::json)
 target_include_directories(robot_tests PUBLIC include src)
 add_test(NAME Catch2Tests COMMAND robot_tests)
