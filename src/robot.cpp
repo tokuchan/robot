@@ -18,7 +18,8 @@ int main(int argc, char *argv[])
     std::cout << "Robot application started." << std::endl;
 
     std::signal(SIGINT, signal_handler);
-    mainloop(stop_source);
+
+    robot::src::mainloop::runMainloop(stop_source);
 
     std::cout << "Robot application exiting." << std::endl;
 

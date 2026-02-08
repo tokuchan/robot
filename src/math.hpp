@@ -16,6 +16,26 @@ namespace robot::src::detail::math::inline exports
 
         constexpr Vec2() = default;
         constexpr Vec2(Float theX, Float theY) : x(theX), y(theY) {}
+
+        constexpr void clear() { x = 0; y = 0; }
+
+        constexpr void set(Float theX, Float theY)
+        {
+            x = theX;
+            y = theY;
+        }
+
+        constexpr auto & operator=(Vec2 other)
+        {
+            set(other.x, other.y);
+            return *this;
+        }
+
+        constexpr auto & operator=(std::pair<Float, Float> other)
+        { 
+            set(other.first, other.second); 
+            return *this;
+        }
     };
 
     inline constexpr Vec2 operator+(Vec2 a, Vec2 b) { return {a.x + b.x, a.y + b.y}; }

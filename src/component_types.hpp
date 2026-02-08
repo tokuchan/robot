@@ -18,13 +18,28 @@ static_assert(__cplusplus > 2020'00);
 namespace robot::src::detail::component_types::inline exports
 {
     /// @brief Velocity component representing 2D motion.
-    using Velocity = Vec2;
+    struct Velocity : public Vec2
+    {
+        template <typename... Args>
+        Velocity(Args &&...args) : Vec2(std::forward<Args>(args)...)
+        {}
+    };
 
     /// @brief Position component representing 2D coordinates.
-    using Position = Vec2;
+    struct Position : public Vec2
+    {
+        template <typename... Args>
+        Position(Args &&...args) : Vec2(std::forward<Args>(args)...)
+        {}
+    };
 
     /// @brief Player input component representing directional input.
-    using PlayerInput = Vec2;
+    struct PlayerInput : public Vec2
+    {
+        template <typename... Args>
+        PlayerInput(Args &&...args) : Vec2(std::forward<Args>(args)...)
+        {}
+    };
 
     /// @brief Counter component storing the number of hits taken.
     struct HitCounter

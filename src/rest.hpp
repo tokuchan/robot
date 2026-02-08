@@ -16,43 +16,19 @@ namespace robot::src::detail::rest::inline exports
     namespace net = boost::asio;
     using tcp = net::ip::tcp;
 
-    class RESTServer : public std::enable_shared_from_this<RESTServer>
-    {
-    private:
-        net::io_context &ioc_;
-        tcp::acceptor acceptor_;
-        EntityStore &entity_store_;
-
-    public:
-        RESTServer(net::io_context &ioc, EntityStore &entity_store, unsigned short port)
-            : ioc_(ioc), acceptor_(ioc, tcp::endpoint(tcp::v4(), port)), entity_store_(entity_store)
-        {
-        }
-
-        void run() { do_accept(); }
-
-    private:
-        void do_accept()
-        {
-            acceptor_.async_accept([shared_this = shared_from_this()](beast::error_code ec, tcp::socket socket)
-                                   {
-                if (!ec)
-                    std::make_shared<Session>(shared_this->ioc_, std::move(socket), shared_this->entity_store_)->run();
-                shared_this->do_accept(); });
-        }
-    };
-
     class Session : public std::enable_shared_from_this<Session>
     {
     private:
         net::io_context &ioc_;
-        beast::ssl_stream<tcp::socket> stream_;
+        beast::tcp_stream stream_;
         beast::flat_buffer buffer_;
+        std::mutex &store_mutex_;
         EntityStore &entity_store_;
+        http::request<http::string_body> req_;
 
     public:
-        Session(net::io_context &ioc, tcp::socket socket, EntityStore &entity_store)
-            : ioc_(ioc), stream_(std::move(socket)), entity_store_(entity_store)
+        Session(net::io_context &ioc, tcp::socket socket, std::mutex &store_mutex, EntityStore &entity_store)
+            : ioc_(ioc), stream_(std::move(socket)), store_mutex_(store_mutex), entity_store_(entity_store)
         {
         }
 
@@ -103,11 +79,11 @@ namespace robot::src::detail::rest::inline exports
 
                 if (inputs.contains(0))
                 {
-                    entity_store_.at<PlayerInput>()[0] = {x, y};
+                    inputs[0] = PlayerInput(x, y);
                 }
                 else
                 {
-                    entity_store_.at<PlayerInput>().insert(0, {x, y});
+                    inputs.insert(0, PlayerInput(x, y));
                 }
                 send_response(http::status::ok, R"({"status":"ok"})");
             }
@@ -168,10 +144,35 @@ namespace robot::src::detail::rest::inline exports
         void do_close()
         {
             beast::error_code ec;
-            stream_.shutdown(ec);
+            stream_.socket().shutdown(tcp::socket::shutdown_both, ec);
+        }
+    };
+
+    class RESTServer : public std::enable_shared_from_this<RESTServer>
+    {
+    private:
+        net::io_context &ioc_;
+        tcp::acceptor acceptor_;
+        std::mutex &store_mutex_;
+        EntityStore &entity_store_;
+
+    public:
+        RESTServer(net::io_context &ioc, std::mutex &store_mutex, EntityStore &entity_store, unsigned short port)
+            : ioc_(ioc), acceptor_(ioc, tcp::endpoint(tcp::v4(), port)), store_mutex_(store_mutex), entity_store_(entity_store)
+        {
         }
 
-        http::request<http::string_body> req_;
+        void run() { do_accept(); }
+
+    private:
+        void do_accept()
+        {
+            acceptor_.async_accept([shared_this = shared_from_this()](beast::error_code ec, tcp::socket socket)
+                                   {
+                if (!ec)
+                    std::make_shared<Session>(shared_this->ioc_, std::move(socket), shared_this->store_mutex_, shared_this->entity_store_)->run();
+                shared_this->do_accept(); });
+        }
     };
 }
 
