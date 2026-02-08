@@ -23,6 +23,9 @@ namespace robot::src::detail::component_types::inline exports
     /// @brief Position component representing 2D coordinates.
     using Position = Vec2;
 
+    /// @brief Player input component representing directional input.
+    using PlayerInput = Vec2;
+
     /// @brief Counter component storing the number of hits taken.
     struct HitCounter
     {
@@ -170,6 +173,8 @@ namespace robot::src::detail::component_types::inline exports
             return checkSeparationWith(*this) && checkSeparationWith(other);
         }
     };
+
+    using EntityStore = Components<Position, Velocity, PlayerInput, HitCounter, Polygon>;
 }
 
 namespace robot::src::inline exports::inline component_types
