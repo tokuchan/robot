@@ -13,7 +13,7 @@ help: ## Show this help message
 # Build target - uses Dockerfile to invoke cmake in Nix environment
 build: ## Build the robot program using cmake in Nix dev environment
 	podman build --security-opt label=disable -t robot-build .
-	podman run --rm -v $(PWD):/workspace -w /workspace robot-build nix develop --command bash -c "rm -rf build && cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build"
+	podman run --rm -v $(PWD):/workspace -w /workspace robot-build nix develop --command bash -c "cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build"
 
 # IntelliSense target - fix compile_commands.json paths for host IDE
 intellisense: build ## Fix compile_commands.json paths for IntelliSense
