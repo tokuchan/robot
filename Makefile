@@ -42,7 +42,7 @@ test-filter: build ## Run tests matching a filter (make test-filter FILTER="patt
 
 # Robot target - runs the built robot program in Nix container
 robot: build ## Build and run the robot program
-	podman run --rm -v $(PWD):/workspace -w /workspace robot-build ./build/robot
+	podman run --rm -p 8080:8080 -v $(PWD):/workspace -w /workspace robot-build ./build/robot
 
 # Docs target - regenerates documentation
 docs: ## Regenerate Doxygen documentation
