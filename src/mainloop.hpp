@@ -40,6 +40,8 @@ void runMainloop( std::stop_source & stop_source )
     std::jthread rest_thread(
         [ &stop_source, &store_mutex, &store, &ioc ]( std::stop_token stop_token ) {
             std::cout << "REST server started on port 8080." << std::endl;
+            // print a clickable URL if the terminal supports it
+            std::cout << "Open http://localhost:8080 in your browser to control the robot." << std::endl;
             auto rest_server = std::make_shared< RESTServer >( ioc, store_mutex, store, 8080 );
             rest_server->run();
             ioc.run();
