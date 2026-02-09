@@ -31,6 +31,7 @@ void runMainloop( std::stop_source & stop_source )
                 handlePlayerInput( store );
                 handleCollisions( store );
                 updatePositions( store );
+                std::this_thread::sleep_for( std::chrono::milliseconds( 16 ) ); // ~60 FPS
             }
 
             std::cout << "\rMain loop exiting..." << std::endl;
