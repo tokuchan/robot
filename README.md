@@ -13,7 +13,7 @@ Ensure you have the following installed:
 
 1. Clone the repository
 2. Run `make` for available commands and instructions
-3. Run `make ui` to build and run the project
+3. Run `make robot` to build and run the project
 
 ## Description
 
