@@ -44,14 +44,14 @@ void runMainloop( std::stop_source & stop_source )
             std::cout << "Open http://localhost:8080 in your browser to control the robot." << std::endl;
             auto rest_server = std::make_shared< RESTServer >( ioc, store_mutex, store, 8080 );
             rest_server->run();
-            ioc.run();
 
-            // The REST server runs its own io_context loop, so we just wait
-            // for the stop token.
-            while( !stop_token.stop_requested() )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-            }
+            // Register a callback to stop the io_context when the stop token is requested
+            std::stop_callback stop_cb( stop_token, [ &ioc ]() {
+                ioc.stop();
+            } );
+
+            // Run the io_context - this will block until ioc.stop() is called
+            ioc.run();
 
             std::cout << "\rREST server exiting..." << std::endl;
         },
