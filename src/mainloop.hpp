@@ -7,6 +7,7 @@
 #include <stop_token>
 #include <thread>
 
+#include "assets.hpp"
 #include "component_types.hpp"
 #include "rest.hpp"
 #include "systems.hpp"
@@ -20,9 +21,15 @@ void runMainloop( std::stop_source & stop_source )
     std::mutex store_mutex;
     EntityStore store;
     boost::asio::io_context ioc;
+    std::string theKey =
+        "example_key"; // In a real application, you might want to get this from user input or a config file.
 
     std::jthread loop_thread(
-        [ &stop_source, &store_mutex, &store ]( std::stop_token stop_token ) {
+        [ &stop_source, &store_mutex, &store, &theKey ]( std::stop_token stop_token ) {
+            std::cout << "Building procedural assets from key " << theKey << "..." << std::endl;
+            buildProceduralAssets( store, theKey );
+            std::cout << "Done." << std::endl;
+
             std::cout << "Main loop started. Press Ctrl+C to stop." << std::endl;
 
             while( !stop_token.stop_requested() )
