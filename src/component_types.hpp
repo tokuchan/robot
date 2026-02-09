@@ -70,7 +70,7 @@ struct Polygon
 
     /// @brief Construct a polygon from a list of Vec2 vertices.
     /// @param vertices List of Vec2 vertex coordinates.
-    Polygon( std::initializer_list< Vec2 > vertices )
+    explicit Polygon( std::initializer_list< Vec2 > vertices )
     {
         for( const auto & v : vertices )
         {
@@ -81,6 +81,15 @@ struct Polygon
 
     /// @brief Default constructor for an empty polygon.
     Polygon() = default;
+
+    /// @brief Emplace a new vertex into the polygon.
+    /// @param x X-coordinate of the vertex.
+    /// @param y Y-coordinate of the vertex.
+    void emplace_back( Float x, Float y )
+    {
+        vertices_x.push_back( x );
+        vertices_y.push_back( y );
+    }
 
     /// @brief Return the number of vertices in the polygon.
     /// @return The vertex count.
