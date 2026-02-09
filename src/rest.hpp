@@ -70,22 +70,29 @@ private:
                 std::cerr << "REST request error: unknown exception" << std::endl;
                 self->send_response( http::status::internal_server_error, "Internal Server Error" );
             }
-            self->do_read();
         } );
     }
 
     void handle_request()
     {
         auto target = req_.target();
-        if( target == "/input" && req_.method() == http::verb::post )
+        // Strip query parameters (e.g., ?id=...&vscodeBrowserReqId=...) from the path
+        auto target_view = target;
+        auto query_pos = target_view.find( '?' );
+        if( query_pos != std::string_view::npos )
+        {
+            target_view = target_view.substr( 0, query_pos );
+        }
+
+        if( target_view == "/input" && req_.method() == http::verb::post )
         {
             handle_input();
         }
-        else if( target == "/output" && req_.method() == http::verb::get )
+        else if( target_view == "/output" && req_.method() == http::verb::get )
         {
             handle_output();
         }
-        else if( ( target == "/client" || target == "/" ) && req_.method() == http::verb::get )
+        else if( ( target_view == "/client" || target_view == "/" ) && req_.method() == http::verb::get )
         {
             handle_client();
         }
@@ -103,8 +110,11 @@ private:
             auto body = req_.body();
             auto jv = boost::json::parse( body );
             auto obj = jv.as_object();
+            // Only extract x and y - ignore any other fields like IDs
             float x = boost::json::value_to< float >( obj.at( "x" ) );
             float y = boost::json::value_to< float >( obj.at( "y" ) );
+
+            // std::cout << "REST input: entity 0 <- PlayerInput(" << x << ", " << y << ")" << std::endl;
 
             auto & inputs = entity_store_.get< PlayerInput >();
 
@@ -133,6 +143,7 @@ private:
             boost::json::object scene;
             boost::json::array geometries;
 
+            // Iterate over entities but don't expose entity_id to client
             for( auto [ entity_id, polygon ] : entity_store_.get< Polygon >() )
             {
                 boost::json::object geo;
@@ -141,6 +152,7 @@ private:
                 {
                     vertices.push_back( boost::json::array{ x, y } );
                 }
+                // Only send vertices and position - no entity IDs
                 geo[ "vertices" ] = vertices;
                 if( entity_store_.get< Position >().contains( entity_id ) )
                 {
@@ -178,15 +190,25 @@ private:
             display: flex;
             flex-direction: column;
             align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
         }
         h1 {
             margin: 0 0 20px 0;
             font-size: 24px;
         }
+        #canvas-wrapper {
+            width: 100%;
+            max-width: 1200px;
+            flex: 1;
+            display: flex;
+        }
         #canvas {
             border: 2px solid #4a9eff;
             background: #0a0a0a;
             box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+            width: 100%;
+            height: 100%;
         }
         .controls {
             margin-top: 20px;
@@ -212,7 +234,9 @@ private:
 </head>
 <body>
     <h1>🤖 Robot Control Interface</h1>
-    <canvas id="canvas" width="800" height="600"></canvas>
+    <div id="canvas-wrapper">
+        <canvas id="canvas"></canvas>
+    </div>
     <div class="controls">
         <div class="info">
             Use <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> to move
@@ -221,56 +245,84 @@ private:
     </div>
 
     <script>
+        const canvasWrapper = document.getElementById('canvas-wrapper');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const statusEl = document.getElementById('status');
+        let viewWidth = 1;
+        let viewHeight = 1;
+                function resizeCanvas()
+        {
+            const rect = canvasWrapper.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            let w = Math.max( 100, Math.floor( rect.width ) );
+            let h = Math.max( 100, Math.floor( rect.height ) );
+            viewWidth = w;
+            viewHeight = h;
+            canvas.width = Math.floor( w * dpr );
+            canvas.height = Math.floor( h * dpr );
+            ctx.setTransform( dpr, 0, 0, dpr, 0, 0 );
+            console.log( `Canvas resized to ${w}x${h} (dpi: ${dpr})` );
+        }
+
         
         // Input state
-        const keys = { w: false, a: false, s: false, d: false };
+        const keys = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
         let currentInput = { x: 0, y: 0 };
         
         // Keyboard handling
         document.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            if (key in keys && !keys[key]) {
-                keys[key] = true;
-                updateInput();
+            if (e.code in keys) {
+                e.preventDefault();
+                if (!keys[e.code]) {
+                    keys[e.code] = true;
+                    updateInput();
+                }
             }
         });
         
         document.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            if (key in keys) {
-                keys[key] = false;
+            if (e.code in keys) {
+                e.preventDefault();
+                keys[e.code] = false;
                 updateInput();
             }
         });
         
-        function updateInput() {
+        function updateInput()
+        {
             let x = 0, y = 0;
-            if (keys.a) x -= 1;
-            if (keys.d) x += 1;
-            if (keys.w) y += 1;
-            if (keys.s) y -= 1;
-            
+            if( keys.KeyA )
+                x -= 1;
+            if( keys.KeyD )
+                x += 1;
+            if( keys.KeyW )
+                y += 1;
+            if( keys.KeyS )
+                y -= 1;
+
             // Normalize diagonal movement
-            if (x !== 0 && y !== 0) {
-                const len = Math.sqrt(x * x + y * y);
+            if( x !== 0 && y !== 0 )
+            {
+                const len = Math.sqrt( x * x + y * y );
                 x /= len;
                 y /= len;
             }
-            
+
             currentInput = { x, y };
-            statusEl.textContent = `Input: (${x.toFixed(1)}, ${y.toFixed(1)})`;
-            sendInput(x, y);
+            statusEl.textContent = `Input: (${x.toFixed( 1 )}, ${y.toFixed( 1 )})`;
+            console.log(`updateInput: sending (${x.toFixed(2)}, ${y.toFixed(2)})`);
+            sendInput( x, y );
         }
         
         async function sendInput(x, y) {
             try {
+                console.log(`sendInput: POSTing (${x.toFixed(2)}, ${y.toFixed(2)}) to /input`);
+                // Explicitly send only x and y coordinates - no IDs
                 await fetch('/input', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ x, y })
+                    body: JSON.stringify({ x: Number(x), y: Number(y) })
                 });
             } catch (err) {
                 console.error('Failed to send input:', err);
@@ -280,80 +332,216 @@ private:
         async function fetchScene() {
             try {
                 const response = await fetch('/output');
-                return await response.json();
+                if (!response.ok) {
+                    console.error(`fetch /output failed: status ${response.status}`);
+                    return null;
+                }
+                const data = await response.json();
+                console.log('fetchScene succeeded:', data);
+                return data;
             } catch (err) {
                 console.error('Failed to fetch scene:', err);
                 return null;
             }
         }
         
+        function computeSceneBounds(scene) {
+            let minX = Infinity;
+            let minY = Infinity;
+            let maxX = -Infinity;
+            let maxY = -Infinity;
+
+            if (!scene || !scene.geometries) {
+                return { minX: -10, minY: -10, maxX: 10, maxY: 10 };
+            }
+
+            scene.geometries.forEach((geo) => {
+                const pos = geo.position || [0, 0];
+                const vertices = geo.vertices || [];
+                vertices.forEach((v) => {
+                    const wx = pos[0] + v[0];
+                    const wy = pos[1] + v[1];
+                    minX = Math.min(minX, wx);
+                    minY = Math.min(minY, wy);
+                    maxX = Math.max(maxX, wx);
+                    maxY = Math.max(maxY, wy);
+                });
+            });
+
+            if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+                return { minX: -10, minY: -10, maxX: 10, maxY: 10 };
+            }
+
+            let width = Math.max(1, maxX - minX);
+            let height = Math.max(1, maxY - minY);
+            const padX = width * 0.1 + 1;
+            const padY = height * 0.1 + 1;
+            return {
+                minX: minX - padX,
+                minY: minY - padY,
+                maxX: maxX + padX,
+                maxY: maxY + padY
+            };
+        }
+
+        function niceGridStep( rawStep )
+        {
+            if( rawStep <= 0 )
+                rawStep = 1;
+            const power = Math.pow( 10, Math.floor( Math.log10( rawStep ) ) );
+            const scaled = rawStep / power;
+            if( scaled <= 1 )
+                return 1 * power;
+            if( scaled <= 2 )
+                return 2 * power;
+            if( scaled <= 5 )
+                return 5 * power;
+            return 10 * power;
+        }
+
         function drawScene(scene) {
             // Clear canvas
             ctx.fillStyle = '#0a0a0a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
+            ctx.fillRect(0, 0, viewWidth, viewHeight);
+
+            const bounds = computeSceneBounds(scene);
+            const worldWidth = Math.max(1, bounds.maxX - bounds.minX);
+            const worldHeight = Math.max(1, bounds.maxY - bounds.minY);
+            const zoom = 2;
+            const scale = Math.min(viewWidth / worldWidth, viewHeight / worldHeight) * zoom;
+            const centerX = viewWidth / 2;
+            const centerY = viewHeight / 2;
+            const worldCenterX = (bounds.minX + bounds.maxX) / 2;
+            const worldCenterY = (bounds.minY + bounds.maxY) / 2;
+
+            console.log(`Drawing: bounds=[${bounds.minX.toFixed(1)}, ${bounds.minY.toFixed(1)}] to [${bounds.maxX.toFixed(1)}, ${bounds.maxY.toFixed(1)}], scale=${scale.toFixed(2)}`);
+
+            const worldToScreen = (x, y) => {
+                return {
+                    x: centerX + (x - worldCenterX) * scale,
+                    y: centerY - (y - worldCenterY) * scale
+                };
+            };
+
             // Draw grid
             ctx.strokeStyle = '#1a3a5a';
             ctx.lineWidth = 1;
-            const gridSize = 50;
-            for (let x = 0; x < canvas.width; x += gridSize) {
+            const targetGridPixels = 80;
+            const gridStep = niceGridStep(targetGridPixels / scale);
+            const startX = Math.floor(bounds.minX / gridStep) * gridStep;
+            const endX = Math.ceil(bounds.maxX / gridStep) * gridStep;
+            const startY = Math.floor(bounds.minY / gridStep) * gridStep;
+            const endY = Math.ceil(bounds.maxY / gridStep) * gridStep;
+
+            for (let x = startX; x <= endX; x += gridStep) {
+                const a = worldToScreen(x, bounds.minY);
+                const b = worldToScreen(x, bounds.maxY);
                 ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, canvas.height);
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
                 ctx.stroke();
             }
-            for (let y = 0; y < canvas.height; y += gridSize) {
+            for (let y = startY; y <= endY; y += gridStep) {
+                const a = worldToScreen(bounds.minX, y);
+                const b = worldToScreen(bounds.maxX, y);
                 ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(canvas.width, y);
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
                 ctx.stroke();
             }
-            
+
             if (!scene || !scene.geometries) return;
-            
-            // Transform: world coordinates to screen coordinates
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const scale = 50; // pixels per world unit
-            
+
             // Draw geometries
             scene.geometries.forEach((geo, idx) => {
                 const pos = geo.position || [0, 0];
                 const vertices = geo.vertices || [];
-                
+
                 if (vertices.length < 3) return;
-                
+
                 ctx.save();
-                ctx.translate(centerX + pos[0] * scale, centerY - pos[1] * scale);
-                
+
                 // Draw filled polygon
                 ctx.fillStyle = idx === 0 ? '#4a9eff' : '#ff6b6b';
                 ctx.strokeStyle = '#fff';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 vertices.forEach((v, i) => {
-                    const x = v[0] * scale;
-                    const y = -v[1] * scale; // Invert Y for screen coordinates
-                    if (i === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
+                    const worldX = pos[0] + v[0];
+                    const worldY = pos[1] + v[1];
+                    const screen = worldToScreen(worldX, worldY);
+                    if (i === 0) ctx.moveTo(screen.x, screen.y);
+                    else ctx.lineTo(screen.x, screen.y);
                 });
                 ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-                
+
                 ctx.restore();
             });
         }
         
-        // Main render loop
-        async function animate() {
-            const scene = await fetchScene();
-            drawScene(scene);
-            requestAnimationFrame(animate);
+        let lastScene = null;
+        let fetchCount = 0;
+
+        async function updateSceneData()
+        {
+            try
+            {
+                lastScene = await fetchScene();
+                fetchCount++;
+                // Always log first fetch, then occasionally
+                if( fetchCount === 1 || fetchCount % 60 === 0 )
+                {
+                    if( !lastScene )
+                    {
+                        console.warn( 'fetchScene returned null' );
+                    }
+                    else if( !lastScene.geometries )
+                    {
+                        console.warn( 'Scene missing geometries:', lastScene );
+                    }
+                    else
+                    {
+                        console.log( `Fetched scene with ${lastScene.geometries.length} geometries` );
+                    }
+                }
+            }
+            catch( err )
+            {
+                console.error( 'updateSceneData error:', err );
+            }
         }
+
+        function animate()
+        {
+            if( lastScene )
+            {
+                drawScene( lastScene );
+            }
+            else
+            {
+                // Show loading state
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(0, 0, viewWidth, viewHeight);
+                ctx.fillStyle = '#4a9eff';
+                ctx.font = '20px "Courier New", monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('Loading...', viewWidth / 2, viewHeight / 2);
+            }
+            requestAnimationFrame( animate );
+        }
+
+        // Fetch every 33ms (~30fps) instead of 16ms to reduce server load
+        setInterval( updateSceneData, 33 );
         
-        // Start
-        animate();
+        window.addEventListener( 'resize', resizeCanvas );
+
+        // Initialize immediately - no delays
+        resizeCanvas();
+        updateSceneData();
+        requestAnimationFrame( animate );
     </script>
 </body>
 </html>)html";
@@ -376,6 +564,10 @@ private:
                 std::cerr << "REST write error: " << ec.message() << std::endl;
                 self->do_close();
             }
+            else
+            {
+                self->do_read();
+            }
         } );
     }
 
@@ -393,6 +585,10 @@ private:
             {
                 std::cerr << "REST write error: " << ec.message() << std::endl;
                 self->do_close();
+            }
+            else
+            {
+                self->do_read();
             }
         } );
     }
