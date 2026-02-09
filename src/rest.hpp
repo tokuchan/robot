@@ -65,6 +65,10 @@ private:
         {
             handle_output();
         }
+        else if( target == "/client" && req_.method() == http::verb::get )
+        {
+            handle_client();
+        }
         else
         {
             send_response( http::status::not_found, "Not Found" );
@@ -132,11 +136,227 @@ private:
         }
     }
 
+    void handle_client()
+    {
+        constexpr std::string_view html = R"html(<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Control</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            margin: 0 0 20px 0;
+            font-size: 24px;
+        }
+        #canvas {
+            border: 2px solid #4a9eff;
+            background: #0a0a0a;
+            box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .info {
+            margin-top: 15px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .key {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 0 2px;
+            background: #4a9eff;
+            border-radius: 3px;
+            font-weight: bold;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 Robot Control Interface</h1>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <div class="controls">
+        <div class="info">
+            Use <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> to move
+        </div>
+        <div class="info" id="status">Input: (0.0, 0.0)</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        
+        // Input state
+        const keys = { w: false, a: false, s: false, d: false };
+        let currentInput = { x: 0, y: 0 };
+        
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (key in keys && !keys[key]) {
+                keys[key] = true;
+                updateInput();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            const key = e.key.toLowerCase();
+            if (key in keys) {
+                keys[key] = false;
+                updateInput();
+            }
+        });
+        
+        function updateInput() {
+            let x = 0, y = 0;
+            if (keys.a) x -= 1;
+            if (keys.d) x += 1;
+            if (keys.w) y += 1;
+            if (keys.s) y -= 1;
+            
+            // Normalize diagonal movement
+            if (x !== 0 && y !== 0) {
+                const len = Math.sqrt(x * x + y * y);
+                x /= len;
+                y /= len;
+            }
+            
+            currentInput = { x, y };
+            statusEl.textContent = `Input: (${x.toFixed(1)}, ${y.toFixed(1)})`;
+            sendInput(x, y);
+        }
+        
+        async function sendInput(x, y) {
+            try {
+                await fetch('/input', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ x, y })
+                });
+            } catch (err) {
+                console.error('Failed to send input:', err);
+            }
+        }
+        
+        async function fetchScene() {
+            try {
+                const response = await fetch('/output');
+                return await response.json();
+            } catch (err) {
+                console.error('Failed to fetch scene:', err);
+                return null;
+            }
+        }
+        
+        function drawScene(scene) {
+            // Clear canvas
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#1a3a5a';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            if (!scene || !scene.geometries) return;
+            
+            // Transform: world coordinates to screen coordinates
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const scale = 50; // pixels per world unit
+            
+            // Draw geometries
+            scene.geometries.forEach((geo, idx) => {
+                const pos = geo.position || [0, 0];
+                const vertices = geo.vertices || [];
+                
+                if (vertices.length < 3) return;
+                
+                ctx.save();
+                ctx.translate(centerX + pos[0] * scale, centerY - pos[1] * scale);
+                
+                // Draw filled polygon
+                ctx.fillStyle = idx === 0 ? '#4a9eff' : '#ff6b6b';
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                vertices.forEach((v, i) => {
+                    const x = v[0] * scale;
+                    const y = -v[1] * scale; // Invert Y for screen coordinates
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        }
+        
+        // Main render loop
+        async function animate() {
+            const scene = await fetchScene();
+            drawScene(scene);
+            requestAnimationFrame(animate);
+        }
+        
+        // Start
+        animate();
+    </script>
+</body>
+</html>)html";
+
+        send_html_response( http::status::ok, html );
+    }
+
     void send_response( http::status status, std::string_view body )
     {
         auto res = std::make_shared< http::response< http::string_body > >();
         res->result( status );
         res->set( http::field::content_type, "application/json" );
+        res->body() = std::string( body );
+        res->prepare_payload();
+
+        auto self = shared_from_this();
+        http::async_write( stream_, *res, [ self ]( beast::error_code ec, std::size_t ) {
+            if( ec )
+                self->do_close();
+        } );
+    }
+
+    void send_html_response( http::status status, std::string_view body )
+    {
+        auto res = std::make_shared< http::response< http::string_body > >();
+        res->result( status );
+        res->set( http::field::content_type, "text/html" );
         res->body() = std::string( body );
         res->prepare_payload();
 
