@@ -11,6 +11,11 @@ if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
         CACHE STRING "Vcpkg toolchain file")
 endif()
 
+# Use new Boost find behavior (CMP0167)
+cmake_policy(SET CMP0167 NEW)
+# Use new behavior for <PACKAGENAME>_ROOT variables (CMP0144)
+cmake_policy(SET CMP0144 NEW)
+
 # Find required packages using standard find modules
 find_package(Boost REQUIRED COMPONENTS json)
 find_package(Catch2 3 REQUIRED)
