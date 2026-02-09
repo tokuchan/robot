@@ -4,8 +4,11 @@ static_assert( __cplusplus > 2020'00 );
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 #include <boost/json.hpp>
+#include <iostream>
 #include <memory>
+#include <string>
 #include <thread>
+#include <unordered_set>
 
 #include "component_types.hpp"
 
@@ -48,8 +51,25 @@ private:
             if( ec == http::error::end_of_stream )
                 return self->do_close();
             if( ec )
-                return;
-            self->handle_request();
+            {
+                std::cerr << "REST read error: " << ec.message() << std::endl;
+                return self->do_close();
+            }
+            std::cout << "REST request: " << self->req_.method_string() << " " << self->req_.target() << std::endl;
+            try
+            {
+                self->handle_request();
+            }
+            catch( const std::exception & e )
+            {
+                std::cerr << "REST request error: " << e.what() << std::endl;
+                self->send_response( http::status::internal_server_error, "Internal Server Error" );
+            }
+            catch( ... )
+            {
+                std::cerr << "REST request error: unknown exception" << std::endl;
+                self->send_response( http::status::internal_server_error, "Internal Server Error" );
+            }
             self->do_read();
         } );
     }
@@ -65,7 +85,7 @@ private:
         {
             handle_output();
         }
-        else if( target == "/client" && req_.method() == http::verb::get )
+        else if( ( target == "/client" || target == "/" ) && req_.method() == http::verb::get )
         {
             handle_client();
         }
@@ -79,6 +99,7 @@ private:
     {
         try
         {
+            std::lock_guard< std::mutex > lock( store_mutex_ );
             auto body = req_.body();
             auto jv = boost::json::parse( body );
             auto obj = jv.as_object();
@@ -99,6 +120,7 @@ private:
         }
         catch( const std::exception & e )
         {
+            std::cerr << "REST input error: " << e.what() << std::endl;
             send_response( http::status::bad_request, std::string( e.what() ) );
         }
     }
@@ -107,6 +129,7 @@ private:
     {
         try
         {
+            std::lock_guard< std::mutex > lock( store_mutex_ );
             boost::json::object scene;
             boost::json::array geometries;
 
@@ -132,6 +155,7 @@ private:
         }
         catch( const std::exception & e )
         {
+            std::cerr << "REST output error: " << e.what() << std::endl;
             send_response( http::status::internal_server_error, std::string( e.what() ) );
         }
     }
@@ -346,9 +370,12 @@ private:
         res->prepare_payload();
 
         auto self = shared_from_this();
-        http::async_write( stream_, *res, [ self ]( beast::error_code ec, std::size_t ) {
+        http::async_write( stream_, *res, [ self, res ]( beast::error_code ec, std::size_t ) {
             if( ec )
+            {
+                std::cerr << "REST write error: " << ec.message() << std::endl;
                 self->do_close();
+            }
         } );
     }
 
@@ -361,9 +388,12 @@ private:
         res->prepare_payload();
 
         auto self = shared_from_this();
-        http::async_write( stream_, *res, [ self ]( beast::error_code ec, std::size_t ) {
+        http::async_write( stream_, *res, [ self, res ]( beast::error_code ec, std::size_t ) {
             if( ec )
+            {
+                std::cerr << "REST write error: " << ec.message() << std::endl;
                 self->do_close();
+            }
         } );
     }
 
@@ -381,6 +411,7 @@ private:
     tcp::acceptor acceptor_;
     std::mutex & store_mutex_;
     EntityStore & entity_store_;
+    std::unordered_set< std::string > known_clients_;
 
 public:
     RESTServer( net::io_context & ioc, std::mutex & store_mutex, EntityStore & entity_store, unsigned short port )
@@ -400,12 +431,32 @@ private:
     {
         acceptor_.async_accept( [ shared_this = shared_from_this() ]( beast::error_code ec, tcp::socket socket ) {
             if( !ec )
+            {
+                beast::error_code endpoint_ec;
+                auto remote_endpoint = socket.remote_endpoint( endpoint_ec );
+                if( endpoint_ec )
+                {
+                    std::cerr << "REST accept error: " << endpoint_ec.message() << std::endl;
+                }
+                else
+                {
+                    auto client_ip = remote_endpoint.address().to_string();
+                    if( shared_this->known_clients_.insert( client_ip ).second )
+                    {
+                        std::cout << "REST client connected first time from " << client_ip << std::endl;
+                    }
+                }
                 std::make_shared< Session >(
                     shared_this->ioc_,
                     std::move( socket ),
                     shared_this->store_mutex_,
                     shared_this->entity_store_ )
                     ->run();
+            }
+            else
+            {
+                std::cerr << "REST accept error: " << ec.message() << std::endl;
+            }
             shared_this->do_accept();
         } );
     }
