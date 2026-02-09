@@ -17,7 +17,7 @@ Ensure you have the following installed:
 
 ## Description
 
-_(To be completed)_
+This project is a simple simulation of a robot in a 2D world, with static and dynamic obstacles. The robot can be controlled remotely via a web interface, using either a keyboard or a gamepad. The backend is implemented in C++, and the frontend is implemented in JavaScript. The backend uses an Entity Component System (ECS) architecture to manage the game state, and the frontend uses the HTML5 Canvas API to render the world and handle user input. The backend is served via a REST API, and the frontend polls the backend for updates to the game state. The whole system is containerized using Podman, and can be run with a single command after cloning the repository.
 
 ## Design
 
@@ -191,4 +191,4 @@ There is no concrete deployment plan per se, as the final product is the contain
 
 ### Future Work
 
-_(To be completed)_
+* Implement a more robust UI, perhaps using a framework like React or Vue.
