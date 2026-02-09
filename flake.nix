@@ -21,7 +21,7 @@
             boost186
             ccache
             pkg-config
-            clang-tools
+            llvmPackages_18.clang-tools
           ];
           
           shellHook = ''
